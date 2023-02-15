@@ -1,0 +1,2 @@
+# chemie_diagnostics_shiny
+Diagnostiek tijdreeksen
