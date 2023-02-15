@@ -6,8 +6,8 @@ library(glue)
 library(sf)
 library(lubridate)
 library(timetk)
+library(plotly)
 
-# options(OutDec = ",")
 
 # source("R/data_online.R")
 ws_grens <- sf::st_read("data/ws_grens.gpkg") %>% sf::st_transform(crs = 4326)
@@ -27,7 +27,6 @@ ui <- fluidPage(
     windowTitle = "HHSK - Actuele waterkwaliteit"
   ),
   
-  # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
       selectInput("mp_sel", "Meetpunt", choices = c("S_0040")),
@@ -35,33 +34,28 @@ ui <- fluidPage(
       selectInput("param_group", "Parametergroep (optioneel)", multiple = TRUE,
                          choices = list("Algemeen", "Bacteriologie", "Bestrijdingsmiddelen", "Blauwalgen", 
                                         "Metalen opgelost", "Metalen totaal", "Organisch", "Zintuiglijk")),
-      # dateRangeInput("datum_sel", "Periode", language = "nl", separator = "t/m", start = Sys.Date() - 31, format = "dd-mm-yyyy"),
-      sliderInput("jaar_sel", "Periode", 
+      sliderInput("jaar_sel", "Jaren", 
                   value = c(year(Sys.Date()) - 20, year(Sys.Date())), 
                             min = 1967, max = year(Sys.Date()), sep = ""),
-      # selectInput("agg_fun", "Waardebewerkingsmethode", choices = c("Gemiddelde" = "mean",
-      #                                                               "Laatste" = "first", #sorteervolgorde is achterstevoren
-      #                                                              "Mediaan" = "median",
-      #                                                              "Maximum" = "max",
-      #                                                              "Minimum" = "min")),
-      # h3("Toelichting"),
-      # p("De kaart laat de meetpunten zien waar in de gekozen periode metingen van de gekozen parameter beschikbaar zijn.
-      #   De kleuren geven de waarde aan volgens de gekozen bewerkingsmethode. De kleuren zijn niet lineair verdeeld,
-      #   maar geven de volgende intervallen: 0% - 1% - 5% - 10% - 30% - 70% - 90% - 95% - 99% - 100%."),
-      # p("De eerste grafiek toont de metingen (onbewerkt) vanaf 2010 van het meetpunt dat op de kaart wordt aangeklikt."),
-      # p("De tweede grafiek is een histogram met alle metingen (onbewerkt) van de gekozen periode en parameters."),
-      
+      checkboxInput("log_trans", "Logaritmische transformatie"),
       width = 3
     ),
     
     mainPanel(
       tabsetPanel(
-        tabPanel("Grafieken", 
-                 plotOutput("grafiek_loc", height = "500px"),
-                 plotOutput("histogram", height = "350px", width = "600px"),
-                 leafletOutput("kaart", height = "500px"),
-                 ),
-        tabPanel("Diagnostiek")
+        tabPanel("Grafiek", plotOutput("grafiek_loc", height = "600px")),
+        
+        tabPanel("Histogram", plotOutput("histogram", height = "600px", width = "900px")),
+        
+        tabPanel("Kaart", leafletOutput("kaart", height = "800px")),
+        
+        tabPanel("STL", plotlyOutput("stl", width = "80%", height = "800px")),
+        
+        tabPanel("Anomaly", plotlyOutput("anomaly", width = "100%", height = "700px")),
+        
+        tabPanel("ACF", plotlyOutput("acf", width = "70%", height = "700px")),
+        
+        tabPanel("Seasonal", plotlyOutput("seasonal", width = "70%", height = "700px")),
       ),
       
       
@@ -70,18 +64,12 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic required to draw a histogram
+# Define server logic 
 server <- function(input, output) {
   
   meetpunten <- data_online("meetpunten.rds")
   parameters <- data_online("parameters.rds")
-  fys_chem <- data_online("fys_chem.rds") %>% semi_join(filter(meetpunten, meetpunttypering %in% c(1, 2, 3, 5, 12)))
-  
-  # meetpunten_leaflet <- meetpunten %>% 
-  #   select(mp, x, y) %>% 
-  #   sf::st_as_sf(coords = c("x", "y"), crs = 28992) %>% 
-  #   add_lat_long() %>% 
-  #   sf::st_transform(crs = 4326)
+  fys_chem <- data_online("fys_chem.rds") %>% semi_join(filter(meetpunten, meetpunttypering %in% c(1, 2, 3, 5, 6, 12)))
   
   f_parnaam <- maak_opzoeker(parameters, parnr, parnaamlang)
   f_eenheid <- maak_opzoeker(parameters, parnr, eenheid)
@@ -105,35 +93,18 @@ server <- function(input, output) {
   fys_chem_mp <- reactive({fys_chem %>%  filter(mp == input$mp_sel)})
   
   fys_chem_sel <- reactive({
-    fys_chem_mp() %>% 
+    fc_sel <- fys_chem_mp() %>% 
       filter(parnr == input$param_sel,
              year(datum) >= input$jaar_sel[1],
              year(datum) <= input$jaar_sel[2]
       )
+    
+    try(
+      if (input$log_trans) fc_sel <- mutate(fc_sel, waarde = log(waarde))
+      )
+    
+    fc_sel
   })
-  
-  # mp_sel <- reactive({
-  #   if (!is.null(input$kaart_marker_click)){
-  #     
-  #     punt <- 
-  #       st_sfc(
-  #         st_point(c(input$kaart_marker_click[[4]], 
-  #                    input$kaart_marker_click[[3]])), 
-  #         crs = 4326)
-  #     
-  #     mp_op_kaart <- 
-  #       meetpunten_leaflet %>% 
-  #       inner_join(fys_chem_sel(), by = "mp")
-  #     
-  #     mp_sel <- 
-  #       mp_op_kaart %>% 
-  #       .[[st_nearest_feature(punt, mp_op_kaart), 1]]
-  #     
-  #   } else {
-  #     mp_sel <- "XXXX"
-  #   }
-  #   mp_sel
-  # })
   
   # Update meetpuntselectie
   observe({
@@ -168,45 +139,6 @@ server <- function(input, output) {
       leaflet.extras::addFullscreenControl()
   })
   
-  # observe({
-  #   
-  #   agg_fun <- eval(sym(input$agg_fun))
-  #   
-  #   data_leaflet <- meetpunten_leaflet %>% 
-  #     inner_join(fys_chem_sel()) %>% 
-  #     group_by(mp) %>% 
-  #     arrange(desc(datum)) %>% 
-  #     summarise(detectiegrens = ifelse(any(is.na(detectiegrens)), "", paste0(first(detectiegrens), " ")),
-  #               # popup_tekst = glue_collapse(na.omit(glue("{datum} -- {detectiegrens} {waarde} {f_eenheid(input$param_sel)}")[1:12]), sep = "<br>"),
-  #               popup_tekst = glue("<b>Meetpunt:</b> {first(mp)}<br><b>Parameter:</b> {f_parnaam(input$param_sel)}<br><br>{url_pdf(first(mp))}<br><br>{url_csv(first(mp))}"),
-  #               waarde = agg_fun(waarde)) %>% 
-  #     ungroup() %>% 
-  #     arrange(waarde) %>% 
-  #     mutate(label_tekst = glue("{detectiegrens} {format(signif(waarde, 3), decimal.mark = ',', nsmall = 0)} {f_eenheid(input$param_sel)}"))
-  #   
-  #   rev_switch <- !input$param_sel %in% c(10, 11, 12, 14)
-  #   
-  #   pal <- colorBin("RdBu", domain = NULL, bins = f_bins(data_leaflet$waarde), reverse = rev_switch)
-  #   
-  #   if(nrow(data_leaflet) > 0){
-  #     
-  #     leafletProxy("kaart", data = data_leaflet) %>% 
-  #       leaflet::removeControl("legenda") %>% 
-  #       leaflet::clearMarkers() %>% 
-  #       addCircleMarkers(label = ~label_tekst, popup = ~popup_tekst,
-  #                        fillColor = ~pal(waarde), color = "#555", fillOpacity = 1, opacity = 1, 
-  #                        weight = 1, radius = 8, clusterId = "meetpunten") %>% 
-  #       addLegend(pal = pal, values = ~waarde, opacity = 1, 
-  #                 labFormat = labelFormat(suffix = glue(" {f_eenheid(input$param_sel)}")),
-  #                 layerId = "legenda")
-  #   } else {
-  #     
-  #     leafletProxy("kaart") %>% 
-  #       leaflet::removeControl("legenda") %>% 
-  #       leaflet::clearMarkers()
-  #   }
-  # })
-  
   output$histogram <- renderPlot({
     plot <-
       fys_chem_sel() %>%
@@ -231,6 +163,26 @@ server <- function(input, output) {
                     parnaam = f_parnaam(input$param_sel),
                     eenheid = f_eenheid(input$param_sel))
 
+  })
+  
+  output$stl <- renderPlotly({
+    fys_chem_sel() %>% 
+      plot_stl_diagnostics(datum, waarde, .interactive = TRUE)
+  })
+  
+  output$anomaly <- renderPlotly({
+    fys_chem_sel() %>% 
+      plot_anomaly_diagnostics(datum, waarde, .interactive = TRUE, .alpha = 0.04)
+  })
+  
+  output$acf <- renderPlotly({
+    fys_chem_sel() %>% 
+      plot_acf_diagnostics(datum, waarde, .interactive = TRUE)
+  })
+  
+  output$seasonal <- renderPlotly({
+    fys_chem_sel() %>% 
+      plot_seasonal_diagnostics(datum, waarde, .interactive = TRUE)
   })
   
 }
