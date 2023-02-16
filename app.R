@@ -24,7 +24,7 @@ ui <- fluidPage(
   titlePanel( 
     div(column(width = 3, tags$img(src = "logo_website.png", height = "60px")), 
         column(width = 9, h2("Actuele waterkwaliteit", style = "color: #0079C2; font-weight: bold"))),
-    windowTitle = "HHSK - Actuele waterkwaliteit"
+    windowTitle = "HHSK - Diagnostiek tijdreeksen waterkwaliteit"
   ),
   
   sidebarLayout(
@@ -100,7 +100,7 @@ server <- function(input, output) {
       )
     
     try(
-      if (input$log_trans) fc_sel <- mutate(fc_sel, waarde = log(waarde))
+      if (input$log_trans) fc_sel <- mutate(fc_sel, waarde = log10(waarde))
       )
     
     fc_sel
@@ -150,18 +150,46 @@ server <- function(input, output) {
            x = f_eenheid(input$param_sel),
            y = "aantal") +
       hhskthema()
+    
+    if (input$log_trans) {
+      plot <-
+        fys_chem_sel() %>%
+        mutate(waarde = 10 ^ waarde) %>% 
+        ggplot(aes(waarde)) +
+        geom_histogram(fill = grijs) +
+        scale_y_continuous(limits = c(0, NA), expand = expansion(c(0, 0.1))) +
+        labs(title = glue("Histogram van {f_parnaam(input$param_sel)}"),
+             subtitle = glue("Alle metingen van {input$datum_sel[1]} tot en met {input$datum_sel[2]}"),
+             x = f_eenheid(input$param_sel),
+             y = "aantal") +
+        hhskthema() +
+        scale_x_log10()
+    }
 
     plot
   })
   
   output$grafiek_loc <- renderPlot({
 
-    fys_chem_sel() %>%
-
+    grafiek <- 
+      fys_chem_sel() %>%
       grafiek_basis(mp = glue("{input$mp_sel}"),
                     mpomsch = f_mpomsch(input$mp_sel),
                     parnaam = f_parnaam(input$param_sel),
                     eenheid = f_eenheid(input$param_sel))
+    
+    if(input$log_trans) {
+      grafiek <- 
+        fys_chem_sel() %>%
+        mutate(waarde = 10 ^ waarde) %>% 
+        grafiek_basis(mp = glue("{input$mp_sel}"),
+                      mpomsch = f_mpomsch(input$mp_sel),
+                      parnaam = f_parnaam(input$param_sel),
+                      eenheid = f_eenheid(input$param_sel)) 
+        grafiek <- grafiek + scale_y_log10()
+    }
+    
+    grafiek  
 
   })
   
