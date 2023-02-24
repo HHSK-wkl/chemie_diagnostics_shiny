@@ -7,6 +7,7 @@ library(sf)
 library(lubridate)
 library(timetk)
 library(plotly)
+library(rlang)
 
 
 # source("R/data_online.R")
@@ -23,7 +24,7 @@ ui <- fluidPage(
   
   titlePanel( 
     div(column(width = 3, tags$img(src = "logo_website.png", height = "60px")), 
-        column(width = 9, h2("Actuele waterkwaliteit", style = "color: #0079C2; font-weight: bold"))),
+        column(width = 9, h2("Diagnostiek waterkwaliteit", style = "color: #0079C2; font-weight: bold"))),
     windowTitle = "HHSK - Diagnostiek tijdreeksen waterkwaliteit"
   ),
   
@@ -35,7 +36,7 @@ ui <- fluidPage(
                          choices = list("Algemeen", "Bacteriologie", "Bestrijdingsmiddelen", "Blauwalgen", 
                                         "Metalen opgelost", "Metalen totaal", "Organisch", "Zintuiglijk")),
       sliderInput("jaar_sel", "Jaren", 
-                  value = c(year(Sys.Date()) - 20, year(Sys.Date())), 
+                  value = c(year(Sys.Date()) - 20, year(Sys.Date())), step = 1,
                             min = 1967, max = year(Sys.Date()), sep = ""),
       checkboxInput("log_trans", "Logaritmische transformatie"),
       width = 3
@@ -44,6 +45,8 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("Grafiek", plotOutput("grafiek_loc", height = "600px")),
+        
+        tabPanel("Vergelijk jaren", plotOutput("grafiek_vgl", height = "600px")),
         
         tabPanel("Histogram", plotOutput("histogram", height = "600px", width = "900px")),
         
@@ -74,6 +77,30 @@ server <- function(input, output) {
   f_parnaam <- maak_opzoeker(parameters, parnr, parnaamlang)
   f_eenheid <- maak_opzoeker(parameters, parnr, eenheid)
   f_mpomsch <- maak_opzoeker(meetpunten, mp, mpomsch)
+  
+  vgl_jaren <- function(data, mp, parnr){
+    
+    if (max(data$waarde) < 2 * min(data$waarde)) scale_y_custom <- scale_y_continuous() else scale_y_custom <- scale_y_continuous(limits = c(0, NA), expand = expansion(c(0, 0.1)))
+    
+    max_jaar = max(year(data$datum))
+    
+    data %>% 
+      mutate(jaar = year(datum),
+             maand = month(datum, label = TRUE)) %>% 
+      mutate(max_jaar = ifelse(jaar == max_jaar, max_jaar, "Andere jaren")) %>% 
+      ggplot(aes(maand, waarde, group = jaar, colour = max_jaar, size = max_jaar)) + 
+      geom_line() +
+      # scale_x_continuous(breaks = 1:12) +
+      scale_y_custom +
+      scale_colour_manual(values = setNames(c(blauw, "grey70"), c(max_jaar, "Andere jaren"))) +
+      scale_size_manual(values = c(2, 0.6)) + 
+      labs(title = glue("Meetpunt: {mp}"),
+           subtitle = glue("Parameter: {f_parnaam(parnr)}"),
+           y = f_eenheid(parnr),
+           caption = f_mpomsch(mp)) +
+      hhskthema()
+    
+  }
   
   f_bins <- function(domain){ 
     bins <- 
@@ -191,6 +218,12 @@ server <- function(input, output) {
     
     grafiek  
 
+  })
+  
+  output$grafiek_vgl <- renderPlot({
+    fys_chem_sel() %>% 
+      vgl_jaren(mp = input$mp_sel,
+                parnr = input$param_sel)
   })
   
   output$stl <- renderPlotly({
