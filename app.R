@@ -221,9 +221,22 @@ server <- function(input, output) {
   })
   
   output$grafiek_vgl <- renderPlot({
-    fys_chem_sel() %>% 
+    if(input$log_trans) {
+      grafiek <- 
+      fys_chem_sel() %>% 
+      mutate(waarde = 10 ^ waarde) %>% 
+        vgl_jaren(mp = input$mp_sel,
+                  parnr = input$param_sel)
+      grafiek <- grafiek + scale_y_log10()
+      
+    } else {
+    grafiek <- 
+      fys_chem_sel() %>% 
       vgl_jaren(mp = input$mp_sel,
                 parnr = input$param_sel)
+    }
+    
+    grafiek
   })
   
   output$stl <- renderPlotly({
