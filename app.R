@@ -278,8 +278,7 @@ server <- function(input, output) {
              x = "Jaar",
              y = f_eenheid(input$param_sel),
              caption = f_mpomsch(input$mp_sel)) +
-        hhskthema() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        hhskthema() 
     } else {
       ggplot(plot_data, aes(x = factor(jaar), y = waarde)) +
         geom_boxplot(fill = blauw_l) +
@@ -289,8 +288,7 @@ server <- function(input, output) {
              x = "Jaar",
              y = f_eenheid(input$param_sel),
              caption = f_mpomsch(input$mp_sel)) +
-        hhskthema() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        hhskthema() 
     }
   })
   
