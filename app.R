@@ -8,6 +8,8 @@ library(lubridate)
 library(timetk)
 library(plotly)
 library(rlang)
+library(bslib)
+
 
 
 # source("R/data_online.R")
@@ -16,58 +18,100 @@ ws_grens <- sf::st_read("data/ws_grens.gpkg") %>% sf::st_transform(crs = 4326)
 url_csv <- function(mp) paste0('<a href = "https://www.schielandendekrimpenerwaard.nl/kaart/waterkwaliteit/wkl_gegevens_op_kaart/meetgegevens/', mp, '.csv">Meetgegevens</a>')
 url_pdf <- function(mp) paste0('<a href = "https://www.schielandendekrimpenerwaard.nl/kaart/waterkwaliteit/wkl_gegevens_op_kaart/grafieken/', mp, '.pdf">Grafieken</a>')
 
-
-
 # Define UI 
-ui <- fluidPage(
-  # Application title
+ui <- page_sidebar(
+  theme = bs_theme(version = 5,
+                   primary = "#0079C2",
+                   "navbar-bg" = "#0079C2"),
   
-  titlePanel( 
-    div(column(width = 3, tags$img(src = "logo_website.png", height = "60px")), 
-        column(width = 9, h2("Diagnostiek waterkwaliteit", style = "color: #0079C2; font-weight: bold"))),
-    windowTitle = "HHSK - Diagnostiek tijdreeksen waterkwaliteit"
+  title = div(
+    class = "d-flex align-items-center",
+    tags$img(src = "logo_website.png", height = "60px", class = "me-3"),
+    span("Diagnostiek waterkwaliteit", style = "color: #0079C2; font-weight: bold")
   ),
   
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("mp_sel", "Meetpunt", choices = c("S_0040")),
-      selectInput("param_sel", "Parameter", choices = c("Chloride" = 1)),
-      selectInput("param_group", "Parametergroep (optioneel)", multiple = TRUE,
-                         choices = list("Algemeen", "Bacteriologie", "Bestrijdingsmiddelen", "Blauwalgen", 
-                                        "Metalen opgelost", "Metalen totaal", "Organisch", "Zintuiglijk")),
-      sliderInput("jaar_sel", "Jaren", 
-                  value = c(year(Sys.Date()) - 20, year(Sys.Date())), step = 1,
-                            min = 1967, max = year(Sys.Date()), sep = ""),
-      checkboxInput("log_trans", "Logaritmische transformatie"),
-      width = 3
+  # Sidebar
+  sidebar = sidebar(width = 350,
+    selectInput("mp_sel", "Meetpunt", choices = c("S_0040")),
+    selectInput("param_sel", "Parameter", choices = c("Chloride" = 1)),
+    selectInput("param_group", "Parametergroep (optioneel)", multiple = TRUE,
+                choices = list("Algemeen", "Bacteriologie", "Bestrijdingsmiddelen", "Blauwalgen", 
+                               "Metalen opgelost", "Metalen totaal", "Organisch", "Zintuiglijk")),
+    sliderInput("jaar_sel", "Jaren", 
+                value = c(year(Sys.Date()) - 20, year(Sys.Date())), step = 1,
+                min = 1967, max = year(Sys.Date()), sep = ""),
+    checkboxInput("log_trans", "Logaritmische transformatie")
+  ),
+  
+  # Main content
+  navset_card_tab(
+    nav_panel("Grafiek", 
+              card(
+                card_body(
+                  plotOutput("grafiek_loc", height = "600px")
+                )
+              )
     ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Grafiek", plotOutput("grafiek_loc", height = "600px")),
-        
-        tabPanel("Vergelijk jaren", plotOutput("grafiek_vgl", height = "600px")),
-        
-        tabPanel("Histogram", plotOutput("histogram", height = "600px", width = "900px")),
-        
-        tabPanel("Kaart", leafletOutput("kaart", height = "800px")),
-        
-        tabPanel("STL", plotlyOutput("stl", width = "80%", height = "800px")),
-        
-        tabPanel("Anomaly", plotlyOutput("anomaly", width = "100%", height = "700px")),
-        
-        tabPanel("ACF", plotlyOutput("acf", width = "70%", height = "700px")),
-        
-        tabPanel("Seasonal", plotlyOutput("seasonal", width = "70%", height = "700px")),
-      ),
-      
-      
-      width = 9
+    nav_panel("Boxplots",
+              card(
+                card_body(
+                  plotOutput("boxplots", height = "600px")
+                )
+              )
+    ),
+    nav_panel("Vergelijk jaren", 
+              card(
+                card_body(
+                  plotOutput("grafiek_vgl", height = "600px")
+                )
+              )
+    ),
+    nav_panel("Histogram", 
+              card(
+                card_body(
+                  plotOutput("histogram", height = "600px", width = "900px")
+                )
+              )
+    ),
+    nav_panel("Kaart", 
+              card(
+                card_body(
+                  leafletOutput("kaart", height = "800px")
+                )
+              )
+    ),
+    nav_panel("STL", 
+              card(
+                card_body(
+                  plotlyOutput("stl", width = "80%", height = "800px")
+                )
+              )
+    ),
+    nav_panel("Anomaly", 
+              card(
+                card_body(
+                  plotlyOutput("anomaly", width = "100%", height = "700px")
+                )
+              )
+    ),
+    nav_panel("ACF", 
+              card(
+                card_body(
+                  plotlyOutput("acf", width = "70%", height = "700px")
+                )
+              )
+    ),
+    nav_panel("Seasonal", 
+              card(
+                card_body(
+                  plotlyOutput("seasonal", width = "70%", height = "700px")
+                )
+              )
     )
   )
 )
 
-# Define server logic 
+# Server logic remains the same
 server <- function(input, output) {
   
   meetpunten <- data_online("meetpunten.rds")
@@ -90,7 +134,6 @@ server <- function(input, output) {
       mutate(max_jaar = ifelse(jaar == max_jaar, max_jaar, "Andere jaren")) %>% 
       ggplot(aes(maand, waarde, group = jaar, colour = max_jaar, size = max_jaar)) + 
       geom_line() +
-      # scale_x_continuous(breaks = 1:12) +
       scale_y_custom +
       scale_colour_manual(values = setNames(c(blauw, "grey70"), c(max_jaar, "Andere jaren"))) +
       scale_size_manual(values = c(2, 0.6)) + 
@@ -99,7 +142,6 @@ server <- function(input, output) {
            y = f_eenheid(parnr),
            caption = f_mpomsch(mp)) +
       hhskthema()
-    
   }
   
   f_bins <- function(domain){ 
@@ -218,6 +260,38 @@ server <- function(input, output) {
     
     grafiek  
 
+  })
+  
+  output$boxplots <- renderPlot({
+    plot_data <- fys_chem_sel() %>%
+      mutate(jaar = year(datum))
+    
+    if(input$log_trans) {
+      plot_data <- plot_data %>%
+        mutate(waarde = 10 ^ waarde)
+      
+      ggplot(plot_data, aes(x = factor(jaar), y = waarde)) +
+        geom_boxplot(fill = blauw_l) +
+        scale_y_log10() +
+        labs(title = glue("Boxplots van {f_parnaam(input$param_sel)} per jaar"),
+             subtitle = glue("Meetpunt: {input$mp_sel}"),
+             x = "Jaar",
+             y = f_eenheid(input$param_sel),
+             caption = f_mpomsch(input$mp_sel)) +
+        hhskthema() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    } else {
+      ggplot(plot_data, aes(x = factor(jaar), y = waarde)) +
+        geom_boxplot(fill = blauw_l) +
+        scale_y_continuous(limits = c(0, NA), expand = expansion(c(0, 0.1))) +
+        labs(title = glue("Boxplots van {f_parnaam(input$param_sel)} per jaar"),
+             subtitle = glue("Meetpunt: {input$mp_sel}"),
+             x = "Jaar",
+             y = f_eenheid(input$param_sel),
+             caption = f_mpomsch(input$mp_sel)) +
+        hhskthema() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
   })
   
   output$grafiek_vgl <- renderPlot({
