@@ -40,7 +40,8 @@ ui <- page_sidebar(
     sliderInput("jaar_sel", "Jaren", 
                 value = c(year(Sys.Date()) - 20, year(Sys.Date())), step = 1,
                 min = 1967, max = year(Sys.Date()), sep = ""),
-    checkboxInput("log_trans", "Logaritmische transformatie")
+    checkboxInput("log_trans", "Logaritmische transformatie"),
+    checkboxInput("diff_trans", "Absoluut verschil met vorige meting")
   ),
   
   # Main content
@@ -167,6 +168,8 @@ server <- function(input, output) {
              year(datum) >= input$jaar_sel[1],
              year(datum) <= input$jaar_sel[2]
       )
+    
+    if (input$diff_trans) fc_sel <- mutate(fc_sel, waarde = abs(waarde - lag(waarde, default = first(waarde))))
     
     try(
       if (input$log_trans) fc_sel <- mutate(fc_sel, waarde = log10(waarde))
