@@ -21,13 +21,12 @@ url_pdf <- function(mp) paste0('<a href = "https://www.schielandendekrimpenerwaa
 # Define UI 
 ui <- page_sidebar(
   theme = bs_theme(version = 5,
-                   primary = "#0079C2",
-                   "navbar-bg" = "#0079C2"),
+                   brand = "brand/_brand.yml"),
   
   title = div(
     class = "d-flex align-items-center",
-    tags$img(src = "logo_website.png", height = "60px", class = "me-3"),
-    span("Diagnostiek waterkwaliteit", style = "color: #0079C2; font-weight: bold")
+    tags$img(src = "logo_kleur.png", height = "60px", class = "me-3"),
+    span("Diagnostiek waterkwaliteit", style = "color: #0067C6; font-weight: bold")
   ),
   
   # Sidebar
@@ -49,7 +48,7 @@ ui <- page_sidebar(
     nav_panel("Grafiek", 
               card(
                 card_body(
-                  plotOutput("grafiek_loc", height = "600px")
+                  plotOutput("grafiek_loc")
                 )
               )
     ),
@@ -64,6 +63,13 @@ ui <- page_sidebar(
               card(
                 card_body(
                   plotOutput("grafiek_vgl", height = "600px")
+                )
+              )
+    ),
+    nav_panel("Vergelijk maanden", 
+              card(full_screen = TRUE,
+                card_body(
+                  plotOutput("grafiek_maanden", height = "600px")
                 )
               )
     ),
@@ -112,12 +118,13 @@ ui <- page_sidebar(
   )
 )
 
-# Server logic remains the same
 server <- function(input, output) {
   
   meetpunten <- data_online("meetpunten.rds")
   parameters <- data_online("parameters.rds")
   fys_chem <- data_online("fys_chem.rds") %>% semi_join(filter(meetpunten, meetpunttypering %in% c(1, 2, 3, 5, 6, 12)))
+  
+  
   
   f_parnaam <- maak_opzoeker(parameters, parnr, parnaamlang)
   f_eenheid <- maak_opzoeker(parameters, parnr, eenheid)
@@ -138,6 +145,30 @@ server <- function(input, output) {
       scale_y_custom +
       scale_colour_manual(values = setNames(c(blauw, "grey70"), c(max_jaar, "Andere jaren"))) +
       scale_size_manual(values = c(2, 0.6)) + 
+      labs(title = glue("Meetpunt: {mp}"),
+           subtitle = glue("Parameter: {f_parnaam(parnr)}"),
+           y = f_eenheid(parnr),
+           caption = f_mpomsch(mp)) +
+      hhskthema()
+  }
+  
+  vgl_maanden <- function(data, mp, parnr){
+    
+    if (max(data$waarde) < 2 * min(data$waarde)) scale_y_custom <- scale_y_continuous() else scale_y_custom <- scale_y_continuous(limits = c(0, NA), expand = expansion(c(0, 0.1)))
+    
+    
+    data %>% 
+      mutate(jaar = year(datum),
+             maand = month(datum, label = TRUE, abbr = FALSE)) %>% 
+      ggplot(aes(jaar, waarde)) + 
+      geom_point(colour = blauw) + 
+      geom_line(colour = blauw) + 
+      geom_smooth(se = FALSE, col = "grey80", linetype = "dashed", fill = "grey40", 
+                  alpha = 0.08, fullrange = TRUE) +
+      facet_wrap(~maand, ncol = 4) +
+      scale_y_custom +
+      # scale_colour_manual(values = setNames(c(blauw, "grey70"), c(max_jaar, "Andere jaren"))) +
+      # scale_size_manual(values = c(2, 0.6)) + 
       labs(title = glue("Meetpunt: {mp}"),
            subtitle = glue("Parameter: {f_parnaam(parnr)}"),
            y = f_eenheid(parnr),
@@ -263,7 +294,9 @@ server <- function(input, output) {
     
     grafiek  
 
-  })
+  },
+  res = 96
+  )
   
   output$boxplots <- renderPlot({
     plot_data <- fys_chem_sel() %>%
@@ -312,6 +345,26 @@ server <- function(input, output) {
     }
     
     grafiek
+  })
+  
+  output$grafiek_maanden <- renderPlot({
+    if(input$log_trans) {
+      grafiek <- 
+        fys_chem_sel() %>% 
+        mutate(waarde = 10 ^ waarde) %>% 
+        vgl_maanden(mp = input$mp_sel,
+                  parnr = input$param_sel)
+      grafiek <- grafiek + scale_y_log10()
+      
+    } else {
+      grafiek <- 
+        fys_chem_sel() %>% 
+        vgl_maanden(mp = input$mp_sel,
+                  parnr = input$param_sel)
+    }
+    
+    grafiek
+    
   })
   
   output$stl <- renderPlotly({
