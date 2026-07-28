@@ -43,9 +43,7 @@ url_actuele_metingen <-
 
 ```
 
-# Overzicht
-
-## {.sidebar width=20%}
+# {.sidebar width=20%}
 
 ```{r}
 selectInput("mp_sel", "Meetpunt", choices = c("S_0040"))
@@ -64,82 +62,87 @@ checkboxInput("log_trans", "Logaritmische transformatie")
 checkboxInput("diff_trans", "Absoluut verschil met vorige meting")
 ```
 
-## {.tabset}
 
-### Grafiek
+# Grafiek
 
 ```{r}
 plotOutput("grafiek_loc")
 ```
 
-### Boxplots
+# Boxplots
 
 ```{r}
 plotOutput("boxplots", height = "600px")
 ```
 
-### Vergelijk jaren
+# Vergelijk jaren
 
 ```{r}
 plotOutput("grafiek_vgl", height = "600px")
 ```
 
 
-### Vergelijk maanden
+# Vergelijk maanden
 
 
 ```{r}
 plotOutput("grafiek_maanden", height = "600px")
 ```
 
-### Limitatie
+# Limitatie
 
-####
-
-#####
+##
 
 ```{r}
 plotOutput("limitatie_jaar")
 ```
 
-#####
+##
 
 ```{r}
 plotOutput("limitatie_maand")
 ```
 
 
-### Histogram
+# Histogram
 
 ```{r}
 plotOutput("histogram", height = "600px", width = "900px")
 ```
 
-### Kaart
+# Kaart
 
 ```{r}
 leafletOutput("kaart", height = "800px")
 ```
 
-### STL
+# Decompositie
+
+##
 
 ```{r}
  plotlyOutput("stl", width = "80%", height = "800px")
 ```
 
-### Anomaly
+# Anomalie
+
+##
 
 ```{r}
 plotlyOutput("anomaly", width = "100%", height = "700px")
 ```
 
-### ACF
+# Autocorrelatie
+
+##
 
 ```{r}
 plotlyOutput("acf", width = "70%", height = "700px")
 ```
 
-### Seasonal
+# Seizoenen
+
+##
 
 ```{r}
 plotlyOutput("seasonal", width = "70%", height = "700px")
