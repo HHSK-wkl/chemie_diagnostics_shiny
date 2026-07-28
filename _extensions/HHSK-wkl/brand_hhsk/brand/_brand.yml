@@ -1,0 +1,142 @@
+meta:
+  name:
+    full: Hoogheemraadschap van Schieland en de Krimpenerwaard
+    short: HHSK
+  link:
+    website: https://www.schielandendekrimpenerwaard.nl/
+    github: https://github.com/HHSK-wkl
+
+color:
+  palette:
+    blauw: "#0067C6"   # 39%
+    groen: "#76B900"   # 36%
+    oranje: "#F9651F"  # 55%
+    grijs: "#636363"   # 39%
+    wit: "#FFFFFF"     # 100%
+    donkerblauw: "#293173"  # 31%
+    donkergroen: "#015F03"  # 19%
+    donkergrijs: "#4F4F4F"  # 31%
+    lichtblauw: "#8ED4DA"   # 71%
+    lichtgroen: "#CBDF74"   # 66%
+    lichtoranje: "#FFBC80"  # 75%
+    lichtgrijs: "#B5B5B5"   # 71%
+    lichterblauw: "#D2EBEE" # 88%
+    lichtergrijs: "#E0E0E0" # 88%
+    lichtergroen: "#E7F0C0" # 85%
+    tekstgrijs: "#222222"   # 13%
+    achtergrondblauw: "#141838" # 15% #"#1b204b" 20%
+    # kleuren uit HHSKwkl
+    blauw_d: "#293173" # hsl(234, 47%, 31%) Orig HHSK
+    blauw_r: "#0067C6" # hsl(209, 100%, 39%)
+    blauw_m: "#339cff" # hsl(209, 100%, 60%)
+    blauw_l: "#99ceff" # hsl(209, 100%, 80%)
+    groen_d: "#015F03" # hsl(121, 98%, 19%) Orig HHSK
+    groen_r: "#76B900" # hsl(82, 100%, 36%)
+    groen_m: "#b4ff33" # hsl(82, 100%, 60%)
+    groen_l: "#daff99" # hsl(82, 100%, 80%)
+    oranje_r: "#c24105" # hsl(19, 95%, 39%)
+    oranje_m: "#fa7538" # hsl(19, 95%, 60%)
+    oranje_l: "#fcba9c" # hsl(19, 94%, 80%)
+    grijs_d: "#4F4F4F" # hsl(0, 0%, 31%)
+    grijs_r: "#636363" # hsl(0, 0%, 39%)
+    grijs_m: "#999999" # hsl(0, 0%, 60%)
+    grijs_l: "#cccccc" # hsl(0,   0%,   80%)
+    
+  foreground: 
+    light: tekstgrijs # main text color
+    dark:  lichterblauw
+  background: 
+    light: wit
+    dark:  achtergrondblauw
+  primary: blauw
+  secondary: lichtgrijs
+  tertiary: oranje
+
+logo:
+  images:
+    logo-hhsk: 
+      path: logo_kleur.png
+      alt: "Logo van Hoogheemraadschap van Schieland en de Krimpenerwaard"
+    logo-hhsk-small: 
+      path: logo_kleur_48px.png
+      alt: "Logo van Hoogheemraadschap van Schieland en de Krimpenerwaard"
+    logo-hhsk-wit: 
+      path: logo_wit.png
+      alt: "Logo van Hoogheemraadschap van Schieland en de Krimpenerwaard in wit"
+    logo-hhsk-wit-small: 
+      path: logo_wit_48px.png
+      alt: "Logo van Hoogheemraadschap van Schieland en de Krimpenerwaard in wit"
+    favicon: "favicon.svg"
+  small: 
+    light: logo-hhsk-small
+    dark:  logo-hhsk-wit-small
+  medium: 
+    light: logo-hhsk
+    dark:  logo-hhsk-wit
+  large: 
+    light: logo-hhsk
+    dark:  logo-hhsk-wit
+
+typography:
+  fonts:
+    - family: Ruda
+      source: google
+      weight: [600, 900]
+  # base: Ruda
+  headings: 
+    family: Ruda
+    color: 
+      light: donkerblauw
+      dark:  lichtblauw
+    weight: 900
+  link:
+    color: 
+      light: oranje
+      dark: lichtoranje
+
+defaults:
+  bootstrap:
+    defaults:
+      callout-color-note: $brand-blauw
+    #  callout-color-tip: $brand-groen
+    # uses: <string>
+    # functions: <string>
+    # mixins: <string>
+    rules: |
+      .oranje{
+      color: $brand-oranje_r;
+      }
+      
+      .grijs{
+      color: $brand-grijs;
+      }
+      
+      .blauw{
+      color: $brand-blauw;
+      }
+      
+      .donkerblauw{
+      color: $brand-donkerblauw;
+      }
+      
+      .groen{
+      color: $brand-groen;
+      }
+      
+      .footnotes{
+      font-size: 0.8em;
+      }
+      
+      .quarto-figure .leaflet{
+      text-align: left;
+      }
+      
+      .navbar-title{
+      font-family: Ruda;
+      }
+         
+      .quarto-xref{
+        color: $brand-groen;
+      }
+      
+      
