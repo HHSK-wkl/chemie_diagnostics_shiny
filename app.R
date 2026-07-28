@@ -73,6 +73,21 @@ ui <- page_sidebar(
                 )
               )
     ),
+    nav_panel("Limitatie", 
+              fluidRow(
+              column(6,
+              card(full_screen = TRUE, min_height = "700px",
+                   card_body(
+                     plotOutput("limitatie_jaar")
+                   )
+              )),
+              column(6,
+                card(full_screen = TRUE, min_height = "700px",
+                   card_body(
+                     plotOutput("limitatie_maand")
+                   )
+              )))
+    ),
     nav_panel("Histogram", 
               card(
                 card_body(
@@ -365,6 +380,22 @@ server <- function(input, output) {
     
     grafiek
     
+  })
+  
+  output$limitatie_jaar <- renderPlot({
+    fys_chem_mp() |> 
+      filter(
+      year(datum) >= input$jaar_sel[1],
+      year(datum) <= input$jaar_sel[2]) |> 
+      plot_limitatie_jaar(mp = input$mp_sel)
+  })
+  
+  output$limitatie_maand <- renderPlot({
+    fys_chem_mp() |> 
+      filter(
+        year(datum) >= input$jaar_sel[1],
+        year(datum) <= input$jaar_sel[2]) |> 
+      plot_limitatie_maand(mp = input$mp_sel)
   })
   
   output$stl <- renderPlotly({
